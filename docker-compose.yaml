@@ -1,0 +1,19 @@
+version: '3'
+services:
+  db:
+    image: postgres
+    restart: always
+    environment:
+      POSTGRES_USER: api_based_on_test
+      POSTGRES_PASSWORD: api_based_on_test
+      POSTGRES_DATABASE: api_based_on_test
+      POSTGRES_ROOT_PASSWORD: api_based_on_test
+      pgdata: data-pstgresql
+    ports:
+      - "5432:5432"
+    volumes:
+      - data-pstgresql:/data
+
+volumes:
+  data-pstgresql:
+
