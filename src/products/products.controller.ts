@@ -1,7 +1,8 @@
-import { Controller, Body, Get, Post, Patch, Delete, Param } from '@nestjs/common';
-import { CreateProductDto } from './dto/create-product.dto';
+import { Controller, Body, Get, Post, Patch, Delete, Param, Query } from '@nestjs/common';
+import { CreateProductDto } from './dto';
 import { ProductsService } from './products.service';
-import { ProductEntity } from './entity/product.entity';
+import { ProductEntity } from './entity';
+import { SearchParams } from '../interfaces';
 
 @Controller('products')
 export class productsController {
@@ -12,8 +13,8 @@ export class productsController {
   }
 
   @Get()
-  public getProducts(): Promise<ProductEntity[]> {
-    return this.productsService.findAll();
+  public getProducts(@Query() query: SearchParams): Promise<{ products: ProductEntity[], count: number }> {
+    return this.productsService.findAll(query);
   }
 
   @Get(':id')
