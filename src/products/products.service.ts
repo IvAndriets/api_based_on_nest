@@ -1,109 +1,68 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Connection, Repository } from 'typeorm';
+import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto';
-import { ProductEntity } from './entity';
-import { SearchParams } from '../interfaces';
+import { ProductModel } from './entity';
+import { Sequelize, Transaction } from 'sequelize';
+import { FindAndCountOptions } from 'sequelize/types';
+
 
 @Injectable()
 export class ProductsService {
 
   public constructor(
-    @InjectRepository(ProductEntity) private productRepository: Repository<ProductEntity>,
-    private connection: Connection,
+    @InjectModel(ProductModel) private productModel: typeof ProductModel,
+    private readonly sequelize: Sequelize,
   ) {
   }
 
-  public async findAll(query: SearchParams): Promise<{ products: ProductEntity[], count: number }> {
+  public async findAll(queryParam: FindAndCountOptions):Promise<{ rows: ProductModel[]; count: number }> {
     try {
-      const queryBuilder = this.productRepository.createQueryBuilder('product').limit(+(query.limit || '5')).offset(+(query.offset || '0'));
-
-      if (query.name) {
-        console.log(1);
-        queryBuilder.andWhere(`product.name Like'${query.name}' `);
-      }
-
-      if (query.description) {
-        console.log(2);
-
-        queryBuilder.andWhere(`product.name Like '${query.description}' `);
-      }
-
-      if (query.price) {
-        console.log(3);
-
-        queryBuilder.andWhere(`product.name Like '${query.price}' `);
-      }
-
-      const [product, count] = await queryBuilder.getManyAndCount();
-      return { products: [...product], count: count };
+      return this.productModel.findAndCountAll(queryParam);
     } catch (error) {
       throw new HttpException(error, 500);
     }
   }
 
-  public async findOne(id: string): Promise<ProductEntity> {
+  public async findOne(id: string): Promise<ProductModel> {
 
     try {
-      return await this.productRepository.findOne(id);
+      return await this.productModel.findByPk(id);
     } catch (error) {
       throw new NotFoundException(`Can not find product by id: ${id}`);
     }
   }
 
-  // public async filerProducts(filer: string): Promise<any> {
-  //   const filterParams = JSON.parse(filer);
-  //   const queryBuilder = this.productRepository.createQueryBuilder('product');
-  //
-  //   if (filterParams.name) {
-  //     queryBuilder.andWhere(`product.name Like '${filterParams.name}' `);
-  //   }
-  //
-  //   if (filterParams.description) {
-  //     queryBuilder.andWhere(`product.name Like '${filterParams.description}' `);
-  //   }
-  //
-  //   if (filterParams.price) {
-  //     queryBuilder.andWhere(`product.name Like '${filterParams.price}' `);
-  //   }
-  //
-  //   const [product, count] = await queryBuilder.getManyAndCount();
-  //   return [...product, count];
-  // }
-
-  public async create(createProductDto: CreateProductDto): Promise<ProductEntity> {
-    const queryRunner = this.connection.createQueryRunner();
-
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
+  public async create(createProductDto: CreateProductDto): Promise<ProductModel> {
+    const t:Transaction = await this.sequelize.transaction();
 
     try {
-      const product = new ProductEntity();
+      const product = new ProductModel();
+      console.log(createProductDto);
       product.name = createProductDto.name;
       product.description = createProductDto.description;
       product.price = createProductDto.price;
 
-      const savedProduct = await queryRunner.manager.save(product);
-      await queryRunner.commitTransaction();
+      const savedProduct = await this.productModel.create(product, {transaction:t});
+      await t.commit();
 
       return savedProduct;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      await t.rollback();
       throw new HttpException(error, 500);
-    } finally {
-      await queryRunner.release();
     }
 
   }
 
-  public async update(id: string, createProductDto: CreateProductDto): Promise<ProductEntity> {
-    const queryRunner = this.connection.createQueryRunner();
+  public async update(id: string, createProductDto: CreateProductDto): Promise<ProductModel> {
+    const t:Transaction = await this.sequelize.transaction();
 
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
 
     try {
-      const product = await this.productRepository.findOne(id);
+      const product = await this.productModel.findByPk(id);
+
+      if (!product) {
+        throw new NotFoundException('Could not find a product');
+      }
 
       if (createProductDto.name) {
         product.name = createProductDto.name;
@@ -115,41 +74,34 @@ export class ProductsService {
         product.price = createProductDto.price;
       }
 
-      const savedProduct = await queryRunner.manager.save(product);
-      await queryRunner.commitTransaction();
+      const savedProduct = await product.save({transaction:t});
+      await product.reload({transaction:t});
+      await t.commit();
 
       return savedProduct;
     } catch (error) {
-      await queryRunner.rollbackTransaction();
+      await t.rollback();
       throw new HttpException(error, 500);
-    } finally {
-      await queryRunner.release();
     }
   }
 
   public async delete(id: string): Promise<{ message: string }> {
-    const queryRunner = this.connection.createQueryRunner();
+    const t:Transaction = await this.sequelize.transaction();
 
-    await queryRunner.connect();
-    await queryRunner.startTransaction();
     try {
       // Начать траназакцию
-      const product = await queryRunner.manager.findOne(id);
+      const product = await this.productModel.findByPk(id);
 
-      if (product) {
+      if (!product) {
         throw new NotFoundException('Cannot find product for deleting');
       }
 
-      await queryRunner.manager.delete(ProductEntity, id);
-
-      // Закомитить траназакцию
+      await product.destroy();
+      await t.commit();
       return { message: 'Deleted successfully' };
     } catch (error) {
-      // Роллбэк траназакции
-      await queryRunner.rollbackTransaction();
+      await t.rollback();
       throw error instanceof NotFoundException ? error : new HttpException(error, 500);
-    } finally {
-      await queryRunner.release();
     }
   }
 

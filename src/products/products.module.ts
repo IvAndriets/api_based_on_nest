@@ -1,14 +1,21 @@
-import {Module} from '@nestjs/common';
-import {TypeOrmModule} from '@nestjs/typeorm';
-import {ProductEntity} from './entity/product.entity';
-import {ProductsService} from './products.service';
-import {productsController} from './products.controller';
+import { Module } from '@nestjs/common';
+import { ProductModel } from './entity';
+import { ProductsService } from './products.service';
+import { ProductsController } from './products.controller';
+import { SequelizeModule } from '@nestjs/sequelize';
 
 @Module({
-  imports:[TypeOrmModule.forFeature([ProductEntity])],
-  providers:[ProductsService],
-  controllers:[productsController],
+  imports: [
+    SequelizeModule.forFeature([
+      ProductModel,
+    ]),
+  ],
+  providers: [
+    ProductsService,
+  ],
+  controllers: [
+    ProductsController,
+  ],
 })
-export class productsModule {
-
+export class ProductsModule {
 }
