@@ -3,8 +3,10 @@ import { AppController } from './app.controller';
 import { AppService } from './app.service';
 import { SequelizeModule } from '@nestjs/sequelize';
 import { ProductsModule } from './products/products.module';
-import { ProductModel } from './products/entity';
+import { ProductModel } from './products/model';
 import { ConfigModule } from '@nestjs/config';
+import { CategoryModel } from './category/model';
+import { CategoryModule } from './category/category.module';
 
 @Module({
   imports: [
@@ -20,10 +22,12 @@ import { ConfigModule } from '@nestjs/config';
       sync: { alter: true },
       models: [
         ProductModel,
+        CategoryModel,
       ],
       synchronize: true,
     }),
     ProductsModule,
+    CategoryModule,
   ],
   controllers: [AppController],
   providers: [AppService],

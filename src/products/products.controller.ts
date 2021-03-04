@@ -1,7 +1,7 @@
 import { Controller, Body, Get, Post, Patch, Delete, Param, Query } from '@nestjs/common';
 import { CreateProductDto } from './dto';
 import { ProductsService } from './products.service';
-import { ProductModel } from './entity';
+import { ProductModel } from './model';
 import { queryParser, removeFalsyValues } from '../utils';
 import { QueryParam } from '../interfaces';
 import { FindAndCountOptions } from 'sequelize/types';
@@ -23,7 +23,7 @@ export class ProductsController {
     const query: FindAndCountOptions = {
       limit: +limit || 5,
       offset: +offset || 0,
-      order: sort_field ? [[sort_field, ['asc', 'desc'].includes(sort?.toLowerCase()) ? sort : 'ASC']] : null,
+      order: sort_field ? [[sort_field, ['asc', 'desc'].includes(sort.toLowerCase()) ? sort : 'ASC']] : null,
       where: search,
     };
 

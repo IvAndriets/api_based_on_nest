@@ -1,9 +1,10 @@
 import { HttpException, Injectable, NotFoundException } from '@nestjs/common';
 import { InjectModel } from '@nestjs/sequelize';
 import { CreateProductDto } from './dto';
-import { ProductModel } from './entity';
+import { ProductModel } from './model';
 import { Sequelize, Transaction } from 'sequelize';
 import { FindAndCountOptions } from 'sequelize/types';
+import { removeFalsyValues } from '../utils';
 
 
 @Injectable()
@@ -15,7 +16,7 @@ export class ProductsService {
   ) {
   }
 
-  public async findAll(queryParam: FindAndCountOptions):Promise<{ rows: ProductModel[]; count: number }> {
+  public async findAll(queryParam: FindAndCountOptions): Promise<{ rows: ProductModel[]; count: number }> {
     try {
       return this.productModel.findAndCountAll(queryParam);
     } catch (error) {
@@ -33,28 +34,23 @@ export class ProductsService {
   }
 
   public async create(createProductDto: CreateProductDto): Promise<ProductModel> {
-    const t:Transaction = await this.sequelize.transaction();
+    const transaction: Transaction = await this.sequelize.transaction();
 
     try {
-      const product = new ProductModel();
-      console.log(createProductDto);
-      product.name = createProductDto.name;
-      product.description = createProductDto.description;
-      product.price = createProductDto.price;
+      const product = new ProductModel({ ...createProductDto });
+      await product.save({ transaction });
+      await transaction.commit();
 
-      const savedProduct = await this.productModel.create(product, {transaction:t});
-      await t.commit();
-
-      return savedProduct;
+      return product;
     } catch (error) {
-      await t.rollback();
+      await transaction.rollback();
       throw new HttpException(error, 500);
     }
 
   }
 
   public async update(id: string, createProductDto: CreateProductDto): Promise<ProductModel> {
-    const t:Transaction = await this.sequelize.transaction();
+    const transaction: Transaction = await this.sequelize.transaction();
 
 
     try {
@@ -64,32 +60,23 @@ export class ProductsService {
         throw new NotFoundException('Could not find a product');
       }
 
-      if (createProductDto.name) {
-        product.name = createProductDto.name;
-      }
-      if (createProductDto.description) {
-        product.description = createProductDto.description;
-      }
-      if (createProductDto.price) {
-        product.price = createProductDto.price;
-      }
+      product.set(removeFalsyValues(createProductDto));
 
-      const savedProduct = await product.save({transaction:t});
-      await product.reload({transaction:t});
-      await t.commit();
+      const savedProduct = await product.save({ transaction });
+      await product.reload({ transaction });
+      await transaction.commit();
 
       return savedProduct;
     } catch (error) {
-      await t.rollback();
+      await transaction.rollback();
       throw new HttpException(error, 500);
     }
   }
 
   public async delete(id: string): Promise<{ message: string }> {
-    const t:Transaction = await this.sequelize.transaction();
+    const transaction: Transaction = await this.sequelize.transaction();
 
     try {
-      // Начать траназакцию
       const product = await this.productModel.findByPk(id);
 
       if (!product) {
@@ -97,10 +84,10 @@ export class ProductsService {
       }
 
       await product.destroy();
-      await t.commit();
+      await transaction.commit();
       return { message: 'Deleted successfully' };
     } catch (error) {
-      await t.rollback();
+      await transaction.rollback();
       throw error instanceof NotFoundException ? error : new HttpException(error, 500);
     }
   }
