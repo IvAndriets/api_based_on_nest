@@ -1,4 +1,4 @@
-import { Table, Column, CreatedAt, UpdatedAt, Model, ForeignKey } from 'sequelize-typescript';
+import { Table, Column, Model, ForeignKey } from 'sequelize-typescript';
 import { DataTypes } from 'sequelize';
 import { UUIDV4 } from 'sequelize';
 import { CategoryModel } from '../../category/model';
@@ -21,11 +21,5 @@ export class ProductModel extends Model {
   @ForeignKey(() => CategoryModel)
   @Column
   public category_id: string;
-
-  @CreatedAt
-  public created_at: Date;
-
-  @UpdatedAt
-  public updated_at: Date;
 
 }

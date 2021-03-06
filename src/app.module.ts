@@ -7,6 +7,9 @@ import { ProductModel } from './products/model';
 import { ConfigModule } from '@nestjs/config';
 import { CategoryModel } from './category/model';
 import { CategoryModule } from './category/category.module';
+import { DocumentsModule } from './documents/documents.module';
+import { DocumentsHeaderModel } from './documents/model/documentsHeader.model';
+import { DocumentsRowsModel } from './documents/model/documentsRows.model';
 
 @Module({
   imports: [
@@ -23,11 +26,14 @@ import { CategoryModule } from './category/category.module';
       models: [
         ProductModel,
         CategoryModel,
+        DocumentsHeaderModel,
+        DocumentsRowsModel,
       ],
       synchronize: true,
     }),
     ProductsModule,
     CategoryModule,
+    DocumentsModule,
   ],
   controllers: [AppController],
   providers: [AppService],
